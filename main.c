@@ -57,6 +57,12 @@ void min_and_max(Mat mat, float *mn, float *mx) {
   }
 }
 
+void analyze_min_max(const char *prompt, Mat mat) {
+  float mn, mx;
+  min_and_max(mat, &mn, &mx);
+  printf("%s: min = %f, max = %f\n", prompt, mn, mx);
+}
+
 bool dump_mat(const char *file_path, Mat mat) {
   float mn, mx;
   min_and_max(mat, &mn, &mx);
@@ -100,6 +106,42 @@ static void luminance(Img img, Mat lum) {
   }
 }
 
+void sobel_filter(Mat mat, Mat grad) {
+  assert(mat.width == grad.width);
+  assert(mat.height == grad.height);
+
+  static float gx[3][3] = {
+      {1.0, 0.0, -1.0},
+      {2.0, 0.0, -2.0},
+      {1.0, 0.0, -1.0},
+  };
+
+  static float gy[3][3] = {
+      {1.0, 2.0, 1.0},
+      {0.0, 0.0, 0.0},
+      {-1.0, -2.0, -1.0},
+  };
+
+  for (int cy = 0; cy < mat.height; ++cy) {
+    for (int cx = 0; cx < mat.width; ++cx) {
+      float sx = 0.0;
+      float sy = 0.0;
+      for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+          int x = cx + dx;
+          int y = cy + dy;
+          float c = 0 <= x && x < mat.width && 0 <= y && y < mat.height
+                        ? MAT_AT(mat, y, x)
+                        : 0.0;
+          sx += c * gx[dy + 1][dx + 1];
+          sy += c * gy[dy + 1][dx + 1];
+        }
+      }
+      MAT_AT(grad, cy, cx) = sqrtf(sx * sx + sy * sy);
+    }
+  }
+}
+
 int main() {
   const char *file_path = "images/Broadway_tower_edit.jpg";
 
@@ -123,9 +165,16 @@ int main() {
   };
 
   Mat lum = mat_alloc(width_, height_);
+  Mat grad = mat_alloc(width_, height_);
+  Mat dp = mat_alloc(width_, height_);
 
   luminance(img, lum);
+  analyze_min_max("lum", lum);
   dump_mat("lum.png", lum);
+
+  sobel_filter(lum, grad);
+  analyze_min_max("grad", grad);
+  dump_mat("grad.png", grad);
 
   return 0;
 }

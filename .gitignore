@@ -54,6 +54,7 @@ dkms.conf
 
 # MyProject xclude
 nob
+main
 nob.old
 build/
 data/
