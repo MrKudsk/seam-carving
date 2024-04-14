@@ -142,6 +142,27 @@ void sobel_filter(Mat mat, Mat grad) {
   }
 }
 
+void grad_to_dp(Mat grad, Mat dp) {
+  assert(grad.width == dp.width);
+  assert(grad.height == dp.height);
+
+  for (int x = 0; x < grad.width; ++x) {
+    MAT_AT(dp, 0, x) = MAT_AT(grad, 0, x);
+  }
+  for (int y = 1; y < grad.height; ++y) {
+    for (int cx = 0; cx < grad.width; ++cx) {
+      float m = FLT_MAX;
+      for (int dx = -1; dx <= 1; ++dx) {
+        int x = cx + dx;
+        float value = 0 <= x && x < grad.width ? MAT_AT(dp, y - 1, x) : FLT_MAX;
+        if (value < m)
+          m = value;
+      }
+      MAT_AT(dp, y, cx) = MAT_AT(grad, y, cx) + m;
+    }
+  }
+}
+
 int main() {
   const char *file_path = "images/Broadway_tower_edit.jpg";
 
@@ -175,6 +196,10 @@ int main() {
   sobel_filter(lum, grad);
   analyze_min_max("grad", grad);
   dump_mat("grad.png", grad);
+
+  grad_to_dp(grad, dp);
+  analyze_min_max("dp", dp);
+  dump_mat("do.png", dp);
 
   return 0;
 }
